@@ -2,7 +2,7 @@
 Safe Cartesian Trajectory Follower for Fairino Robot.
 """
 
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 import time
 from robot.fairino_driver import FairinoDriver
 from robot.gripper import GripperController
@@ -25,7 +25,7 @@ class TrajectoryFollower:
         self.max_z_mm = max_z_mm
         self.z_offset_mm = z_offset_mm
 
-    def preflight_check(self, waypoints: List[Dict]) -> Tuple_IK:
+    def preflight_check(self, waypoints: List[Dict]) -> Tuple[bool, List[Dict]]:
         """
         Validates safety bounds and IK reachability for all trajectory waypoints.
         """
@@ -119,6 +119,3 @@ class TrajectoryFollower:
         self.driver.soft_refresh()
         print("✓ Trajectory execution completed successfully!")
         return True
-
-
-from typing import Tuple as Tuple_IK
