@@ -1,0 +1,20 @@
+robot:
+  ip: "192.168.57.2"
+  tool: 2
+  user: 0
+  speed: 10.0
+  start_with_movej: true
+  return_to_start: false
+
+safety:
+  min_z_mm: -300.0
+  max_z_mm: 1200.0
+  z_offset_mm: 0.0
+
+gripper:
+  enabled: true
+  index: 1
+  open_pos: 50
+  close_pos: 90
+  vel: 30
+  force: 40

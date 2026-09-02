@@ -1,0 +1,20 @@
+[project]
+name = "oswi-world-model-control"
+version = "0.1.0"
+description = "One-Shot Visual Imitation with World-Model-Guided Trajectory Generation deployed on Fairino Robots"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "torch>=2.0.0",
+    "torchvision>=0.15.0",
+    "numpy>=1.24.0",
+    "einops>=0.7.0",
+    "opencv-python>=4.8.0",
+    "matplotlib>=3.7.0",
+    "pyyaml>=6.0",
+    "tqdm>=4.65.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

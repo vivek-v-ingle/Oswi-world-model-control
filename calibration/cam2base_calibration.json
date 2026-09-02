@@ -1,0 +1,21 @@
+{
+  "source": "Fairino FR10 + External Camera Extrinsics Calibration",
+  "units": "millimeters",
+  "notes": [
+    "T_cam2base maps camera 3D points [X_cam, Y_cam, Z_cam, 1]^T to Fairino base coordinates [X_base, Y_base, Z_base, 1]^T in mm.",
+    "affine_camera_to_robot: 3x4 affine transformation matrix.",
+    "default_rpy: default end-effector orientation [roll, pitch, yaw] in degrees."
+  ],
+  "T_cam2base": [
+    [-0.702679698, 0.683491575, 0.1976879, -423.524069],
+    [0.70374712, 0.708572448, 0.0516243775, -810.929728],
+    [-0.104791379, 0.175397699, -0.978904701, 1590.34233],
+    [0.0, 0.0, 0.0, 1.0]
+  ],
+  "affine_camera_to_robot": [
+    [-0.702679698, 0.683491575, 0.1976879, -423.524069],
+    [0.70374712, 0.708572448, 0.0516243775, -810.929728],
+    [-0.104791379, 0.175397699, -0.978904701, 1590.34233]
+  ],
+  "default_rpy": [178.5136413574218, -1.880074620246887, 12.12576389312744]
+}

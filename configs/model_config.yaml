@@ -1,0 +1,10 @@
+model:
+  latent_dim: 256
+  waypoints: 5
+  sub_waypoints: true
+  image_resolution: [224, 224]
+  rollout_horizon: 16
+  checkpoint_path: "checkpoints/metaworld_model.pt"
+
+calibration:
+  calibration_file: "calibration/cam2base_calibration.json"
