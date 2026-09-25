@@ -12,6 +12,8 @@ wheels/
 # Large model checkpoints
 checkpoints/*.pt
 
-# Outputs
+# Outputs & Local Demos
 outputs/
+data/demos/*.mp4
+data/demos/*.avi
 

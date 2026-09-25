@@ -24,11 +24,11 @@ def normalize_image(img_rgb: np.ndarray, target_size=(224, 224)) -> np.ndarray:
     return img_norm.transpose(2, 0, 1)
 
 
-def preprocess_frame(frame: np.ndarray, repeat_frames: int = 2) -> torch.Tensor:
+def preprocess_frame(frame: np.ndarray, repeat_frames: int = 2, target_size=(224, 224)) -> torch.Tensor:
     """
-    Prepares a single RGB observation frame into a model-ready tensor of shape (1, repeat_frames, 3, 224, 224).
+    Prepares a single RGB observation frame into a model-ready tensor of shape (1, repeat_frames, 3, H, W).
     """
-    norm = normalize_image(frame)
+    norm = normalize_image(frame, target_size=target_size)
     tensor = torch.from_numpy(norm).unsqueeze(0).repeat(repeat_frames, 1, 1, 1)  # (repeat_frames, 3, H, W)
     return tensor.unsqueeze(0)  # (1, repeat_frames, 3, H, W)
 

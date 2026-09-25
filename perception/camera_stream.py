@@ -46,6 +46,10 @@ class CameraStream:
         if self.cap is not None and self.cap.isOpened():
             ret, frame = self.cap.read()
             if ret:
+                # If camera returns stereo side-by-side (e.g. ZED 1344x376 or 2560x720), extract left view
+                h, w = frame.shape[:2]
+                if w > h * 1.7:
+                    frame = frame[:, : w // 2]
                 return cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
         if self.zed is not None:

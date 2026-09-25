@@ -21,34 +21,43 @@ class InferenceEngine:
         latent_dim: int = 256,
         waypoints: int = 5,
         sub_waypoints: bool = True,
+        image_resolution: Optional[Tuple[int, int]] = None,
     ):
         self.device = torch.device(device)
-        self.model = OSVIWorldModel(
-            latent_dim=latent_dim,
-            waypoints=waypoints,
-            sub_waypoints=sub_waypoints,
-            image_resolution=(224, 224),
-        ).to(self.device)
-
         self.checkpoint_path = Path(checkpoint_path)
         if not self.checkpoint_path.exists():
             raise FileNotFoundError(f"Checkpoint not found: {self.checkpoint_path}")
 
-        self._load_checkpoint(self.checkpoint_path)
+        # Auto-detect resolution from checkpoint if not explicitly provided
+        checkpoint = torch.load(self.checkpoint_path, map_location="cpu", weights_only=True)
+        state_dict = checkpoint.get("model_state_dict", checkpoint)
+        cleaned_state_dict = {
+            k.replace("module.", ""): v for k, v in state_dict.items()
+        }
+
+        if image_resolution is None:
+            # Check output head shape (40960 for 256x320 / 80 patches, 25088 for 224x224 / 49 patches)
+            out_dim = cleaned_state_dict.get("forward_model.output_head.weight", None)
+            if out_dim is not None and out_dim.shape[0] == 40960:
+                image_resolution = (256, 320)
+            else:
+                image_resolution = (224, 224)
+
+        self.image_resolution = image_resolution
+        self.model = OSVIWorldModel(
+            latent_dim=latent_dim,
+            waypoints=waypoints,
+            sub_waypoints=sub_waypoints,
+            image_resolution=self.image_resolution,
+        ).to(self.device)
+
+        self.model.load_state_dict(cleaned_state_dict, strict=False)
+        print(f"Loaded OSVI-WM weights from {self.checkpoint_path.name} (Resolution: {self.image_resolution})")
         self.model.eval()
 
         self.projector = None
         if calibration_path is not None:
             self.projector = CoordinateProjector(calibration_path)
-
-    def _load_checkpoint(self, path: Path):
-        checkpoint = torch.load(path, map_location="cpu", weights_only=True)
-        state_dict = checkpoint.get("model_state_dict", checkpoint)
-        cleaned_state_dict = {
-            k.replace("module.", ""): v for k, v in state_dict.items()
-        }
-        self.model.load_state_dict(cleaned_state_dict, strict=False)
-        print(f"Loaded OSVI-WM weights from {path.name}")
 
     def predict(
         self,
@@ -69,12 +78,12 @@ class InferenceEngine:
                 - 'robot_waypoints': List of 3D dicts in Fairino base frame (if calibration provided)
         """
         if not isinstance(teacher_frames, torch.Tensor):
-            context_tensor = preprocess_sequence(teacher_frames, target_len=10)
+            context_tensor = preprocess_sequence(teacher_frames, target_len=10, target_size=self.image_resolution)
         else:
             context_tensor = teacher_frames
 
         if not isinstance(current_obs, torch.Tensor):
-            obs_tensor = preprocess_frame(current_obs, repeat_frames=2)
+            obs_tensor = preprocess_frame(current_obs, repeat_frames=2, target_size=self.image_resolution)
         else:
             obs_tensor = current_obs
 

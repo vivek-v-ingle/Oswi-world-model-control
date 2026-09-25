@@ -31,13 +31,16 @@ def parse_args():
     parser.add_argument("--speed", type=float, default=10.0, help="Movement velocity percentage (1-100)")
     parser.add_argument("--use-gripper", action="store_true", default=True, help="Enable gripper actuation")
     parser.add_argument("--mock-robot", action="store_true", help="Run without physical robot connection")
+    parser.add_argument("--checkpoint", default="checkpoints/pp_model.pt", help="Path to model checkpoint (.pt)")
     parser.add_argument("--z-offset", type=float, default=0.0, help="Safety lift offset in mm")
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
-    checkpoint = PROJECT_ROOT / "checkpoints" / "metaworld_model.pt"
+    checkpoint = PROJECT_ROOT / args.checkpoint if not Path(args.checkpoint).is_absolute() else Path(args.checkpoint)
+    if not checkpoint.exists():
+        checkpoint = PROJECT_ROOT / "checkpoints" / "metaworld_model.pt"
     calibration = PROJECT_ROOT / "calibration" / "cam2base_calibration.json"
 
     print("=" * 70)
@@ -67,6 +70,60 @@ def main():
     engine = InferenceEngine(checkpoint_path=checkpoint, calibration_path=calibration)
     result = engine.predict(teacher_frames=teacher_frames, current_obs=obs_frame, rollout_horizon=16)
     robot_wps = result["robot_waypoints"]
+    raw_wps = result["raw_waypoints"][0].detach().cpu().numpy()
+
+    # Save visual debug plot
+    output_dir = PROJECT_ROOT / "outputs"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    vis_path = output_dir / "live_execution_debug.png"
+
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+
+        fig = plt.figure(figsize=(15, 8))
+        # Top 10 frames
+        for idx in range(min(10, len(teacher_frames))):
+            ax_t = fig.add_subplot(2, 5, idx + 1)
+            ax_t.imshow(teacher_frames[idx])
+            ax_t.set_title(f"Demo Frame {idx}", fontsize=8)
+            ax_t.axis("off")
+
+        # Bottom Left: Live frame with projected trajectory
+        ax_live = fig.add_subplot(2, 2, 3)
+        ax_live.imshow(obs_frame)
+        h_obs, w_obs = obs_frame.shape[:2]
+        for i, wp in enumerate(raw_wps):
+            u, v, d, g = wp
+            px = int((u + 1.0) / 2.0 * w_obs)
+            py = int((v + 1.0) / 2.0 * h_obs)
+            col = "lime" if i == 0 else ("red" if i == len(raw_wps) - 1 else "yellow")
+            ax_live.scatter(px, py, color=col, s=35, zorder=5)
+            ax_live.text(px + 2, py - 2, f"{i}", color="white", fontsize=7, weight="bold")
+        ax_live.set_title("Live Camera + Predicted Waypoint Overlays", fontsize=9)
+        ax_live.axis("off")
+
+        # Bottom Right: 3D Robot Trajectory
+        ax_3d = fig.add_subplot(2, 2, 4, projection="3d")
+        xs = [wp["x_mm"] for wp in robot_wps]
+        ys = [wp["y_mm"] for wp in robot_wps]
+        zs = [wp["z_mm"] + args.z_offset for wp in robot_wps]
+        ax_3d.plot(xs, ys, zs, "b-o", linewidth=1.5)
+        ax_3d.scatter(xs[0], ys[0], zs[0], color="green", s=50, label="Start")
+        ax_3d.scatter(xs[-1], ys[-1], zs[-1], color="red", s=50, label="End")
+        ax_3d.set_xlabel("X (mm)", fontsize=8)
+        ax_3d.set_ylabel("Y (mm)", fontsize=8)
+        ax_3d.set_zlabel("Z (mm)", fontsize=8)
+        ax_3d.set_title("3D Fairino Execution Path (mm)", fontsize=9)
+        ax_3d.legend(fontsize=7)
+
+        plt.tight_layout()
+        plt.savefig(str(vis_path), dpi=150)
+        plt.close()
+        print(f"✓ Visual debug image saved to: {vis_path}")
+    except Exception as e:
+        print(f"[Warning] Could not generate visual debug plot: {e}")
 
     # 4. Connect to Fairino Robot
     driver = FairinoDriver(robot_ip=args.ip, mock=args.mock_robot)

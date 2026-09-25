@@ -51,7 +51,8 @@ class CoordinateProjector:
         N = waypoints_2d.shape[0]
         u = waypoints_2d[:, 0]
         v = waypoints_2d[:, 1]
-        d = waypoints_2d[:, 2]
+        # Camera optical depth is positive forward into the workspace (Z_cam > 0)
+        d = np.abs(waypoints_2d[:, 2])
         gripper = waypoints_2d[:, 3]
 
         # In OSVI-WM: hom_im_coords = [u * d, v * d, d]

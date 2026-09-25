@@ -48,6 +48,24 @@ class TrajectoryFollower:
             desc_pos = [x, y, z, rpy[0], rpy[1], rpy[2]]
             ok, joint_pos = self.driver.check_inverse_kinematics(desc_pos)
 
+            # If default RPY is close to joint limits, test canonical top-down orientations
+            if not ok:
+                actual_tcp = self.driver.get_actual_tcp_pose()
+                actual_rpy = actual_tcp[3:] if len(actual_tcp) >= 6 else [180.0, 0.0, 0.0]
+                candidates = [
+                    [x, y, z, actual_rpy[0], actual_rpy[1], actual_rpy[2]],
+                    [x, y, z, 180.0, 0.0, 0.0],
+                    [x, y, z, -180.0, 0.0, 0.0],
+                    [x, y, z, 180.0, 0.0, 90.0],
+                ]
+                for cand in candidates:
+                    cand_ok, cand_joints = self.driver.check_inverse_kinematics(cand)
+                    if cand_ok:
+                        ok = True
+                        desc_pos = cand
+                        joint_pos = cand_joints
+                        break
+
             if not ok:
                 failures.append((wp["index"], f"IK failed for pose {desc_pos}"))
             else:

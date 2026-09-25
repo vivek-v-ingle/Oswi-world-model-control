@@ -133,7 +133,18 @@ class FairinoDriver:
             vel=vel,
         )
         code = result[0] if isinstance(result, tuple) else result
-        return code == 0
+        if code != 0:
+            print(f"[Notice] MoveL returned code {code}. Attempting MoveJ fallback for target TCP...")
+            res_j = self.robot.MoveJ(
+                joint_pos=j_pos,
+                desc_pos=desc_pos,
+                tool=self.tool,
+                user=self.user,
+                vel=vel,
+            )
+            code_j = res_j[0] if isinstance(res_j, tuple) else res_j
+            return code_j == 0
+        return True
 
     def move_j(
         self,

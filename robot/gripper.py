@@ -27,30 +27,50 @@ class GripperController:
         if self.driver.mock or self.driver.robot is None:
             return
         robot = self.driver.robot
-        # Set gripper configuration: company 6, device 0, soft version 0, bus 0
-        robot.SetGripperConfig(self.gripper_index, 6, 0, 0, 0)
-        time.sleep(0.5)
-        robot.ActGripper(self.gripper_index, 1)
-        time.sleep(1.0)
-        print("Gripper initialized and activated.")
+        try:
+            # Set gripper configuration: company 6, device 0, soft version 0, bus 0
+            robot.SetGripperConfig(6, 0, 0, 0)
+            time.sleep(0.3)
+        except Exception as e:
+            print(f"[Warning] SetGripperConfig notice: {e}")
+
+        try:
+            robot.ActGripper(self.gripper_index, 1)
+            time.sleep(0.5)
+            print("Gripper initialized and activated.")
+        except Exception as e:
+            print(f"[Warning] ActGripper notice: {e}")
+
+    def _send_gripper_cmd(self, target_pos: int):
+        if self.driver.mock or self.driver.robot is None:
+            return
+        robot = self.driver.robot
+        try:
+            # 10-arg signature for current Fairino SDK: (index, pos, vel, force, maxtime, block, type, rotNum, rotVel, rotTorque)
+            robot.MoveGripper(self.gripper_index, target_pos, self.vel, self.force, 30000, 0, 0, 0, 0, 0)
+        except TypeError:
+            try:
+                # 6-arg fallback for older SDK builds
+                robot.MoveGripper(self.gripper_index, target_pos, self.vel, self.force, 30000, 0)
+            except Exception as e:
+                print(f"[Warning] Gripper motion notice: {e}")
+        except Exception as e:
+            print(f"[Warning] Gripper motion notice: {e}")
+        time.sleep(0.3)
 
     def open(self):
         if self.driver.mock or self.driver.robot is None:
             print(f"[Mock Gripper] OPEN (pos: {self.open_pos})")
             return
-        self.driver.robot.MoveGripper(
-            self.gripper_index, self.open_pos, self.vel, self.force, 30000, 0
-        )
-        time.sleep(0.3)
+        print(f"[Gripper] Opening (pos: {self.open_pos}%)")
+        self._send_gripper_cmd(self.open_pos)
 
     def close(self):
         if self.driver.mock or self.driver.robot is None:
             print(f"[Mock Gripper] CLOSE (pos: {self.close_pos})")
             return
-        self.driver.robot.MoveGripper(
-            self.gripper_index, self.close_pos, self.vel, self.force, 30000, 0
-        )
-        time.sleep(0.3)
+        print(f"[Gripper] Closing (pos: {self.close_pos}%)")
+        self._send_gripper_cmd(self.close_pos)
 
     def apply_event(self, event: str):
         event_clean = (event or "").strip().lower()
