@@ -196,9 +196,9 @@ def main():
         # Normalized coordinates u, v in [-1, 1]
         u_norm = (u_px / w_img) * 2.0 - 1.0
         v_norm = (v_px / h_img) * 2.0 - 1.0
-        # In OSVI-WM camera convention: default optical depth is ~1.0-1.3m (1200mm)
-        # We can approximate depth or let least-squares solve the linear mapping:
-        camera_3d_points.append([u_norm * 1200.0, v_norm * 1200.0, 1200.0])
+        # In OSVI-WM: hom_im_coords = [u * d, v * d, d] * depth_scale (default 1000.0 mm)
+        d_scale = args.depth_scale
+        camera_3d_points.append([u_norm * d_scale, v_norm * d_scale, d_scale])
 
     # 5. Compute Transformation Matrix
     print("\nComputing optimal T_cam2base transformation matrix via least-squares...")

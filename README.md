@@ -18,10 +18,11 @@ A clean, modular, standalone deployment repository for **OSVI-WM (One-Shot Visua
 ```text
 Oswi-world-model-control/
 ├── checkpoints/
-│   ├── metaworld_model.pt         # Pretrained OSVI-WM weights
-│   └── pp_model.pt                # Pick-and-Place cross-embodiment weights
+│   ├── metaworld_model.pt         # Pretrained MetaWorld weights (224x224)
+│   └── pp_model.pt                # Pick-and-Place cross-embodiment weights (256x320)
 ├── calibration/
 │   ├── cam2base_calibration.json  # Camera extrinsics matrix (T_cam2base)
+│   ├── calibrate_4point.py        # Interactive 4-point touch-off Eye-to-Base calibration
 │   └── projection.py              # Projects (u, v, depth) -> Fairino base frame (mm)
 ├── core/
 │   ├── model.py                   # Top-level OSVIWorldModel architecture
@@ -29,13 +30,13 @@ Oswi-world-model-control/
 │   ├── resnet_encoder.py          # ResNet-18 visual feature extractor
 │   ├── traj_embed.py              # Spatio-temporal non-local attention action model
 │   ├── attentive_pooler.py        # Query pooler for trajectory decoding
-│   └── inference_engine.py        # Clean high-level prediction API
+│   └── inference_engine.py        # Clean high-level prediction API (multi-resolution)
 ├── perception/
-│   ├── transforms.py              # Image preprocessing & normalization (224x224)
+│   ├── transforms.py              # Image preprocessing & normalization
 │   ├── video_loader.py            # 10-frame demonstration video loader
 │   └── camera_stream.py           # ZED & USB camera stream adapter (with mock fallback)
 ├── robot/
-│   ├── fairino_driver.py          # Direct Fairino XML-RPC controller (MoveL, MoveJ, State)
+│   ├── fairino_driver.py          # Direct Fairino XML-RPC controller (MoveL, MoveJ, IK search)
 │   ├── gripper.py                 # Gripper activation and grasp commands
 │   ├── trajectory_follower.py     # Safe Cartesian follower with IK preflight check
 │   └── fairino_sdk/               # Official Fairino Python SDK (Linux & Windows)
@@ -43,10 +44,15 @@ Oswi-world-model-control/
 │   ├── model_config.yaml          # World model hyperparameters
 │   └── fairino_robot.yaml         # Robot IP, speed, safety limits
 ├── scripts/
+│   ├── 00_extract_svo_to_mp4.py   # ZED .svo/.svo2 to .mp4 video extractor
+│   ├── 00_record_demo.py          # Live top-view demonstration recorder
+│   ├── 00_trim_video.py           # Video trimming & cropping utility
 │   ├── 01_offline_inference.py    # Step 1: Run inference & print 3D waypoints table
 │   ├── 02_visualize_trajectory.py # Step 2: Plot 3D trajectory (saves to outputs/trajectory_3d.png)
 │   ├── 03_robot_dry_run.py        # Step 3: Run IK & reachability preflight check
-│   └── 04_execute_on_fairino.py   # Step 4: Live deployment with Camera + Fairino FR10
+│   ├── 04_execute_on_fairino.py   # Step 4: Live deployment with Camera + Fairino FR10
+│   └── 05_visualize_demo_vs_execution.py # Step 5: Side-by-side demo vs prediction MP4 generator
+├── main.py                        # Unified Master CLI runner
 ├── pyproject.toml
 └── README.md
 ```
@@ -65,37 +71,44 @@ source .venv/bin/activate
 
 ---
 
-## 🧪 Phased Execution Workflow
+## 🧪 Unified Execution CLI (`main.py`)
 
-### Step 1: Offline Inference & Trajectory Foreseeing
-Run the forward world model on a 10-frame demonstration and observe the decoded 3D waypoints:
+You can execute all pipeline stages directly through `python main.py <mode>`:
+
+### 1. Offline Trajectory Foreseeing
 ```bash
-python scripts/01_offline_inference.py
+python main.py inference --checkpoint checkpoints/pp_model.pt
 ```
 
-### Step 2: 3D Trajectory Visualization
-Generate a 3D trajectory plot and gripper profile (saves image to `outputs/trajectory_3d.png`):
+### 2. Side-by-Side Visualizer & Video Generator
 ```bash
-python scripts/02_visualize_trajectory.py
+python main.py visualize --demo-video data/demos/bottle_top_view.mp4
 ```
 
-### Step 3: Robot IK Preflight Verification
-Verify that every predicted waypoint is within physical safety bounds and has a valid Inverse Kinematics solution:
+### 3. Preflight Inverse Kinematics Verification
 ```bash
-python scripts/03_robot_dry_run.py --mock
+python main.py dry-run --mock-robot
 ```
 
-### Step 4: Live Deployment on Fairino FR10
-Deploy on the lab workstation connected to the Fairino robot:
+### 4. Physical Robot Execution (Fairino FR10)
 ```bash
-python scripts/04_execute_on_fairino.py \
-  --demo-video data/sample_demos/screwdriver_demo.mp4 \
-  --camera zed \
-  --ip 192.168.57.2 \
-  --speed 10.0
+python main.py execute --ip 192.168.57.2 --speed 8.0
+```
+
+### 5. Interactive 4-Point Eye-to-Base Calibration
+```bash
+python main.py calibrate --ip 192.168.57.2 --camera-id 0
 ```
 
 ---
 
+## 🔬 Research Findings: 2D World Model vs Physical Manipulator
+
+* **Visual Imitation**: OSVI-WM reliably infers macro pick-and-place task sequences directly from unsegmented video in normalized 2D image space.
+* **Extrinsics Dependency**: 2D image-space world models **strictly require precise extrinsic Eye-to-Base calibration ($T_{\text{cam2base}}$)** for physical grasping. Physical deployments without millimeter-accurate calibration suffer from projective spatial drift, establishing the necessity for cross-view joint representation models (e.g. JEPA) or direct 3D visual grounding.
+
+---
+
 ## 📄 License & Open-Source Notice
-This repository is 100% open-source compatible (combines public NeurIPS 2025 OSVI-WM architecture with standard Fairino OEM client SDK and modular Python robotics control).
+This repository is 100% open-source compatible (Apache 2.0 / MIT).
+

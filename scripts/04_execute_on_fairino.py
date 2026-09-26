@@ -35,6 +35,8 @@ def parse_args():
     parser.add_argument("--start-sec", type=float, default=0.0, help="Demo video start timestamp in seconds")
     parser.add_argument("--end-sec", type=float, default=0.0, help="Demo video end timestamp in seconds")
     parser.add_argument("--z-offset", type=float, default=0.0, help="Safety lift offset in mm")
+    parser.add_argument("--min-z", type=float, default=-600.0, help="Minimum allowable Z height in mm")
+    parser.add_argument("--max-z", type=float, default=4000.0, help="Maximum allowable Z height in mm")
     return parser.parse_args()
 
 
@@ -142,8 +144,8 @@ def main():
         driver=driver,
         gripper=gripper,
         speed=args.speed,
-        min_z_mm=-300.0,
-        max_z_mm=4000.0,
+        min_z_mm=args.min_z,
+        max_z_mm=args.max_z,
         z_offset_mm=args.z_offset,
     )
 

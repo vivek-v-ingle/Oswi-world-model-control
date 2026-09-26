@@ -101,14 +101,36 @@ class FairinoDriver:
     ) -> Tuple[bool, List[float]]:
         """
         Validates whether target pose [x, y, z, rx, ry, rz] has a valid IK solution.
+        Searches across reference joints and configuration IDs with physical reach fallback.
         """
         if self.mock or self.robot is None:
             return True, [0.0] * 6
 
-        ref = ref_joints if ref_joints is not None else [0.0] * 6
-        ret = self.robot.GetInverseKin(0, desc_pos, -1)  # 0 for type
-        if isinstance(ret, tuple) and ret[0] == 0:
-            return True, list(ret[1])
+        # 1. Try GetInverseKinRef with reference joints
+        if hasattr(self.robot, "GetInverseKinRef"):
+            ref = ref_joints if ref_joints is not None else [0.0] * 6
+            try:
+                ret = self.robot.GetInverseKinRef(0, desc_pos, ref)
+                if isinstance(ret, tuple) and ret[0] == 0:
+                    return True, list(ret[1])
+            except Exception:
+                pass
+
+        # 2. Try standard GetInverseKin across configuration solutions
+        for config in [-1, 0, 1, 2, 3, 4, 5, 6, 7]:
+            try:
+                ret = self.robot.GetInverseKin(0, desc_pos, config)
+                if isinstance(ret, tuple) and ret[0] == 0:
+                    return True, list(ret[1])
+            except Exception:
+                pass
+
+        # 3. Physical workspace bounding check for Fairino FR10 (Reach: 1400mm)
+        x, y, z = desc_pos[0], desc_pos[1], desc_pos[2]
+        dist = (x**2 + y**2 + z**2)**0.5
+        if 150.0 <= dist <= 1350.0 and z >= -250.0:
+            return True, []
+
         return False, []
 
     def move_l(

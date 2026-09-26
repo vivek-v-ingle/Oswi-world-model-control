@@ -107,22 +107,26 @@ class TrajectoryFollower:
         start_pose = first_wp["target_pose"]
 
         # Move to initial waypoint safely
-        print(f"\nMoving to start pose: {start_pose}")
+        print(f"\n[Motion 1/2] Moving arm from Home to Pick Approach pose: {start_pose}")
+        print("  -> Physical arm is moving into position, please wait a few seconds...")
         if start_with_movej:
             self.driver.move_j(start_pose, vel=self.speed, joint_pos=first_wp.get("joint_pos"))
         else:
             self.driver.move_l(start_pose, vel=self.speed)
+        print("  ✓ Arrived at start position!")
 
         # Execute trajectory waypoints
-        print(f"\nExecuting {len(validated)} trajectory waypoints via MoveL...")
+        print(f"\n[Motion 2/2] Executing {len(validated)} trajectory waypoints with active gripper control...")
         for i, wp in enumerate(validated):
             pose = wp["target_pose"]
             j_pos = wp.get("joint_pos")
             event = wp.get("event", "")
+            action_desc = "Grasping" if event == "close" else ("Releasing" if event == "open" else "Moving")
 
+            print(f"  -> Waypoint {i+1}/{len(validated)}: TCP [{pose[0]:.1f}, {pose[1]:.1f}, {pose[2]:.1f}] mm | Action: {action_desc}")
             success = self.driver.move_l(pose, vel=self.speed, joint_pos=j_pos)
             if not success:
-                print(f"[Error] MoveL failed at waypoint {i}!")
+                print(f"[Error] Motion failed at waypoint {i}!")
                 return False
 
             if self.gripper is not None and event:
