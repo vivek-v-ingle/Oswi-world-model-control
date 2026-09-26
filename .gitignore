@@ -14,6 +14,11 @@ checkpoints/*.pt
 
 # Outputs & Local Demos
 outputs/
+*.zip
 data/demos/*.mp4
 data/demos/*.avi
+data/demos/*.svo
+data/demos/*.svo2
+data/*.png
+
 

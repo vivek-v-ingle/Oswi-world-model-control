@@ -10,31 +10,40 @@ import numpy as np
 
 class DemonstrationLoader:
     @staticmethod
-    def load_video(video_path: Union[str, Path], max_frames: int = 10) -> List[np.ndarray]:
+    def load_video(
+        video_path: Union[str, Path],
+        max_frames: int = 10,
+        start_sec: float = 0.0,
+        end_sec: float = 0.0,
+    ) -> List[np.ndarray]:
         """
-        Reads video file and extracts uniformly sampled RGB frames.
+        Reads video file and extracts uniformly sampled RGB frames,
+        with optional start_sec and end_sec temporal trimming.
         """
         path = Path(video_path)
         if not path.exists():
             raise FileNotFoundError(f"Video file not found: {path}")
 
         cap = cv2.VideoCapture(str(path))
+        fps = cap.get(cv2.CAP_PROP_FPS) or 15.0
         raw_frames = []
+        frame_idx = 0
+
+        start_frame = int(start_sec * fps) if start_sec > 0 else 0
+        end_frame = int(end_sec * fps) if end_sec > 0 else int(1e9)
+
         while cap.isOpened():
             ret, frame = cap.read()
             if not ret:
                 break
-            # Convert BGR (OpenCV) -> RGB
-            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            raw_frames.append(frame_rgb)
+            if start_frame <= frame_idx <= end_frame:
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                raw_frames.append(frame_rgb)
+            frame_idx += 1
         cap.release()
 
         if not raw_frames:
-            raise RuntimeError(f"Could not read frames from {path}")
-
-        if len(raw_frames) < max_frames:
-            indices = np.linspace(0, len(raw_frames) - 1, max_frames, dtype=int)
-            return [raw_frames[i] for i in indices]
+            raise RuntimeError(f"Could not read frames from {path} in range [{start_sec}s, {end_sec}s]")
 
         indices = np.linspace(0, len(raw_frames) - 1, max_frames, dtype=int)
         return [raw_frames[i] for i in indices]

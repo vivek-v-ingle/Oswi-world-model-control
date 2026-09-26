@@ -134,16 +134,8 @@ class FairinoDriver:
         )
         code = result[0] if isinstance(result, tuple) else result
         if code != 0:
-            print(f"[Notice] MoveL returned code {code}. Attempting MoveJ fallback for target TCP...")
-            res_j = self.robot.MoveJ(
-                joint_pos=j_pos,
-                desc_pos=desc_pos,
-                tool=self.tool,
-                user=self.user,
-                vel=vel,
-            )
-            code_j = res_j[0] if isinstance(res_j, tuple) else res_j
-            return code_j == 0
+            print(f"[Notice] MoveL returned code {code} (Cartesian singularity/boundary). Falling back to MoveJ...")
+            return self.move_j(desc_pos=desc_pos, vel=vel, joint_pos=j_pos)
         return True
 
     def move_j(
@@ -160,11 +152,16 @@ class FairinoDriver:
             return True
 
         j_pos = joint_pos if joint_pos is not None else [0.0] * 6
+        if j_pos == [0.0] * 6:
+            ok, ik_j = self.check_inverse_kinematics(desc_pos)
+            if ok and ik_j:
+                j_pos = ik_j
+
         result = self.robot.MoveJ(
-            joint_pos=j_pos,
-            desc_pos=desc_pos,
-            tool=self.tool,
-            user=self.user,
+            j_pos,
+            self.tool,
+            self.user,
+            desc_pos,
             vel=vel,
         )
         code = result[0] if isinstance(result, tuple) else result

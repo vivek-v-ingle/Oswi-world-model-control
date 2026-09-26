@@ -31,6 +31,8 @@ def parse_args():
     parser.add_argument("--mock", action="store_true", default=False, help="Force Mock mode for offline testing")
     parser.add_argument("--speed", type=float, default=10.0, help="Movement velocity percentage")
     parser.add_argument("--checkpoint", default="checkpoints/pp_model.pt", help="Path to model checkpoint (.pt)")
+    parser.add_argument("--start-sec", type=float, default=0.0, help="Demo video start timestamp in seconds")
+    parser.add_argument("--end-sec", type=float, default=0.0, help="Demo video end timestamp in seconds")
     parser.add_argument("--z-offset", type=float, default=0.0, help="Safety lift offset in mm")
     return parser.parse_args()
 
@@ -48,8 +50,13 @@ def main():
 
     # 1. Load Demo
     if args.demo_video:
-        print(f"Loading teacher demo from video: {args.demo_video}")
-        teacher_frames = DemonstrationLoader.load_video(args.demo_video, max_frames=10)
+        print(f"Loading teacher demo from video: {args.demo_video} (range: {args.start_sec}s - {args.end_sec or 'end'}s)")
+        teacher_frames = DemonstrationLoader.load_video(
+            args.demo_video,
+            max_frames=10,
+            start_sec=args.start_sec,
+            end_sec=args.end_sec,
+        )
     elif args.demo_dir:
         print(f"Loading teacher demo from image directory: {args.demo_dir}")
         teacher_frames = DemonstrationLoader.load_image_folder(args.demo_dir, max_frames=10)

@@ -18,9 +18,15 @@ class CameraStream:
 
     def start(self):
         if self.camera_type == "opencv":
-            self.cap = cv2.VideoCapture(self.camera_id)
-            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.resolution[0])
-            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.resolution[1])
+            self.cap = cv2.VideoCapture(self.camera_id, cv2.CAP_V4L2)
+            self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'YUYV'))
+            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1344)
+            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 376)
+            self.cap.set(cv2.CAP_PROP_FPS, 30)
+            if not self.cap.isOpened():
+                self.cap = cv2.VideoCapture(self.camera_id)
+                self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.resolution[0])
+                self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.resolution[1])
             if not self.cap.isOpened():
                 print(f"[Warning] Could not open OpenCV camera {self.camera_id}. Operating in Mock mode.")
                 self.cap = None
